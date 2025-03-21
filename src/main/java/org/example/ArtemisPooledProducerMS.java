@@ -14,15 +14,18 @@ public class ArtemisPooledProducerMS {
 
     private static final int MAX_POOL_SIZE = 5;
     private static final int THREAD_POOL_SIZE = 5;
-    private static final String brokerURL = "(tcp://localhost:61616,tcp://localhost:51516)?ha=true";
+    private static final String brokerURL = "(tcp://artemis.demo.artemis.com:61616,tcp://artemis.demo.artemis.com:61617)?sslEnabled=true&trustStorePath=C:/Users/sidde/wildfly.jks&trustStorePassword=jboss@123&ha=trueamp&reconnectAttempts=10&failoverOnServerShutdown=true";
     private static final String destinationName = "test-queue";
     private static volatile JmsPoolConnectionFactory amqConnectionPool = null;
 
     public static void main(String[] args) {
 
+        System.setProperty("org.apache.activemq.ssl.trustStore","C:/Users/sidde/wildfly.jks");
+        System.setProperty("org.apache.activemq.ssl.trustStorePassword","jboss@123");
+
         ActiveMQConnectionFactory factory = new ActiveMQConnectionFactory(brokerURL);
-        factory.setUser("master");
-        factory.setPassword("master");
+        factory.setUser("amq-broker");
+        factory.setPassword("secret");
 
         factory.setReconnectAttempts(-1); 
         factory.setUseTopologyForLoadBalancing(true); // Load balancing among brokers
@@ -38,7 +41,7 @@ public class ArtemisPooledProducerMS {
         // Get a connection from the pool
         ExecutorService executorService = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
 
-        for (int i = 0; i < 20000; i++) {
+        for (int i = 0; i < 200000; i++) {
             final int messageId = i;
             executorService.submit(() -> {
                 try (Connection connection = amqConnectionPool.createConnection()) {

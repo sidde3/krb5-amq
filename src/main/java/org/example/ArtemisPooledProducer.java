@@ -14,7 +14,7 @@ public class ArtemisPooledProducer {
 
     private static final int MAX_POOL_SIZE = 5;
     private static final int THREAD_POOL_SIZE = 5;
-    private static final String brokerURL = "(tcp://artemis.demo.artemis.com:61616,tcp://localhost:61617)?ha=true&blockOnAcknowledge=true";
+    private static final String brokerURL = "(tcp://artemis.demo.artemis.com:61616,tcp://artemis.demo.artemis.com:61617)?sslEnabled=true&trustStorePath=C:/Users/sidde/wildfly.jks&trustStorePassword=jboss@123&ha=trueamp&reconnectAttempts=10&failoverOnServerShutdown=true";
     private static final String destinationName = "test-queue";
     private static volatile JmsPoolConnectionFactory amqConnectionPool = null;
 
@@ -42,7 +42,7 @@ public class ArtemisPooledProducer {
         // Get a connection from the pool
         ExecutorService executorService = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
 
-        for (int i = 0; i < 10000; i++) {
+        for (int i = 0; i < 100000; i++) {
             final int messageId = i;
             executorService.submit(() -> {
                 try (Connection connection = amqConnectionPool.createConnection()) {

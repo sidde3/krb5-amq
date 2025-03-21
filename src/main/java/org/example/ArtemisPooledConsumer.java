@@ -21,8 +21,8 @@ public class ArtemisPooledConsumer {
 
     private static final int MAX_POOL_SIZE = 5;
     private static final int THREAD_POOL_SIZE = 5;
-    private static final String brokerURL = "(tcp://localhost:61616,tcp://localhost:61617)?ha=true&blockOnAcknowledge=true";
-    private static final String destinationName = "new-queue";
+    private static final String brokerURL = "(tcp://artemis.demo.artemis.com:61616,tcp://artemis.demo.artemis.com:61617)?sslEnabled=true&trustStorePath=C:/Users/sidde/wildfly.jks&trustStorePassword=jboss@123&ha=trueamp&reconnectAttempts=10&failoverOnServerShutdown=true&consumerWindowsSize=0";
+    private static final String destinationName = "test-queue";
     private static volatile JmsPoolConnectionFactory amqConnectionPool = null;
     private static final Set<String> receivedMessageIds = Collections.synchronizedSet(new HashSet<>());
     private static final Set<String> expectedMessageIds = Collections.synchronizedSet(new HashSet<>());
@@ -32,9 +32,12 @@ public class ArtemisPooledConsumer {
 
     public static void main(String[] args) {
 
+        System.setProperty("org.apache.activemq.ssl.trustStore","C:/Users/sidde/wildfly.jks");
+        System.setProperty("org.apache.activemq.ssl.trustStorePassword","jboss@123");
+
         ActiveMQConnectionFactory factory = new ActiveMQConnectionFactory(brokerURL);
-        factory.setUser("master");
-        factory.setPassword("master");
+        factory.setUser("amq-broker");
+        factory.setPassword("secret");
         factory.setCallTimeout(5000);
 
         factory.setReconnectAttempts(1);
@@ -56,14 +59,17 @@ public class ArtemisPooledConsumer {
 
         for (int i = 0; i < THREAD_POOL_SIZE; i++) {
             executorService.submit(() -> {
-                try (Connection connection = amqConnectionPool.createConnection()) {
+                try (Connection connection = factory.createConnection()) {
                     connection.start();
-                    try (Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)) {
+                    while(true){
+                        Session session = null;
+                    try  {
+                         session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
                         Queue queue = session.createQueue(destinationName);
                         MessageConsumer consumer = session.createConsumer(queue);
 
-                        while (true) {
-                            Message message = consumer.receive(2000);
+                        //while (true) {
+                            Message message = consumer.receive(20000);
                             if (message == null) {
                                 System.out.println(Thread.currentThread().getName() + " finished consuming messages..........");
                                 break; // Exit if no more messages
@@ -80,7 +86,13 @@ public class ArtemisPooledConsumer {
                                     duplicateMessageIds.add(textMessage.getText());
                                 }
                             }
-                        }
+
+                    }catch(Exception ignored){
+                        ignored.printStackTrace();
+                        }finally {
+                        assert session != null;
+                        session.close();
+                    }
                     }
                 } catch (JMSException ex) {
                     System.out.println(LocalDateTime.ofInstant(Instant.now(), ZoneId.systemDefault()) +
@@ -101,8 +113,8 @@ public class ArtemisPooledConsumer {
 
         // Print results after all threads have completed
         System.out.println("All threads have completed execution.");
-        System.out.println("Missing message IDs: " + expectedMessageIds);
-        System.out.println("Duplicate Message IDs: " + duplicateMessageIds);
+        //System.out.println("Missing message IDs: " + expectedMessageIds);
+        //System.out.println("Duplicate Message IDs: " + duplicateMessageIds);
         System.out.println("Size of received messages: " + receivedMessageIds.size());
 
     }
